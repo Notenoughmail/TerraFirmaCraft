@@ -80,6 +80,11 @@ public class IngameOverlays
         OverlayRegistry.enableOverlay(HUD_MOVER, !TFCConfig.CLIENT.enableExperienceBar.get());
     }
 
+    // Rough sketch of an idea re: advanced compatibility with other mods with XP-like bars
+    // A new public method is added to allow other mods to declare the height of their UI elements which we then use to shift the left and right heights
+    // If this is worth pursuing further, TODO: Javadoc & possible rename addUIConsideration, change the usage to be the top of the element, rather than its height
+    private static final List<Integer> uiHeights = new ArrayList<>();
+
     public static void renderHealth(ForgeIngameGui gui, PoseStack stack, float partialTicks, int width, int height)
     {
         final Minecraft minecraft = Minecraft.getInstance();
@@ -229,6 +234,8 @@ public class IngameOverlays
                 {
                     gui.blit(stack, x, y, 0, 116, amount, 5);
                 }
+
+                addUIConsideration(6);
             }
 
             RenderSystem.enableBlend();
@@ -237,6 +244,7 @@ public class IngameOverlays
         else if (isShowingExperience)
         {
             ForgeIngameGui.EXPERIENCE_BAR_ELEMENT.render(gui, stack, partialTicks, width, height);
+            addUIConsideration(6);
         }
     }
 
@@ -249,6 +257,7 @@ public class IngameOverlays
         if (isShowingExperience || (!isShowingExperience && !isStyleLeftHotbar))
         {
             ForgeIngameGui.JUMP_BAR_ELEMENT.render(gui, stack, partialTicks, width, height);
+            addUIConsideration(6);
         }
         else if (localPlayer != null && localPlayer.isRidingJumpable() && setup(gui, mc) && !isShowingExperience && isStyleLeftHotbar)
         {
@@ -266,6 +275,8 @@ public class IngameOverlays
 
             RenderSystem.enableBlend();
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+
+            addUIConsideration(6);
         }
     }
 
@@ -366,8 +377,10 @@ public class IngameOverlays
 
     private static void moveLeftAndRightHeights(ForgeIngameGui gui, PoseStack stack, float partialTicks, int width, int height)
     {
-        gui.right_height -= considerExperienceConfigs();
-        gui.left_height -= considerExperienceConfigs();
+        // gui.right_height -= considerExperienceConfigs();
+        // gui.left_height -= considerExperienceConfigs();
+        gui.left_height -= 6 - getTallestActiveWideUI();
+        gui.right_height -= 6 - getTallestActiveWideUI();
     }
 
     private static boolean setupForSurvival(ForgeIngameGui gui, Minecraft minecraft)
@@ -394,5 +407,17 @@ public class IngameOverlays
             case BUMP -> player != null && (player.fishing instanceof TFCFishingHook || player.isRidingJumpable()) ? 0 : 6;
             default -> 0;
         };
+    }
+
+    private static int getTallestActiveWideUI()
+    {
+        uiHeights.add(0);
+        Collections.sort(uiHeights);
+        return uiHeights.get(uiHeights.size() - 1);
+    }
+
+    public static void addUIConsideration(int uiHeight)
+    {
+        uiHeights.add(uiHeight);
     }
 }
