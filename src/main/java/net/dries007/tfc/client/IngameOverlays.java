@@ -33,6 +33,7 @@ import net.dries007.tfc.config.DisabledExperienceBarStyle;
 import net.dries007.tfc.config.TFCConfig;
 import net.dries007.tfc.util.Helpers;
 
+import static net.dries007.tfc.TerraFirmaCraft.LOGGER;
 import static net.dries007.tfc.TerraFirmaCraft.MOD_NAME;
 
 public class IngameOverlays
@@ -78,6 +79,15 @@ public class IngameOverlays
         OverlayRegistry.enableOverlay(EXPERIENCE, true);
         OverlayRegistry.enableOverlay(JUMP_METER, true);
         OverlayRegistry.enableOverlay(HUD_MOVER, !TFCConfig.CLIENT.enableExperienceBar.get());
+
+        if (TFCConfig.CLIENT.enableDebug.get())
+        {
+            LOGGER.warn("Overlay list:");
+            for (int i = 0 ; i < OverlayRegistry.orderedEntries().size() - 1 ; i++)
+            {
+                LOGGER.warn(OverlayRegistry.orderedEntries().get(i).getDisplayName());
+            }
+        }
     }
 
     public static void renderHealth(ForgeIngameGui gui, PoseStack stack, float partialTicks, int width, int height)
@@ -390,9 +400,29 @@ public class IngameOverlays
         final LocalPlayer player = Minecraft.getInstance().player;
         return switch (TFCConfig.CLIENT.disabledExperienceBarStyle.get())
         {
-            case LEFT_HOTBAR -> 6;
-            case BUMP -> player != null && (player.fishing instanceof TFCFishingHook || player.isRidingJumpable()) ? 0 : 6;
+            case LEFT_HOTBAR -> isAnAdditionalElementRendered() ? 0 : 6;
+            case BUMP -> player != null && (player.fishing instanceof TFCFishingHook || player.isRidingJumpable() || isAnAdditionalElementRendered()) ? 0 : 6;
             default -> 0;
         };
+    }
+
+    // This only works so well, as it requires mods to use enableOverlay. certain mods always render their element and just return before they do anything if the right conditions aren't met
+    // /cough/ https://github.com/Creators-of-Create/Create/blob/mc1.18/dev/src/main/java/com/simibubi/create/content/contraptions/components/structureMovement/interaction/controls/TrainHUD.java#L114 /cough/
+    // Botania doesn't seem to register an overlay and Create always enables theirs, so the two examples I could think of for testing this aren't particularly useful
+    // At least knowing this putting "Create's Train Driver HUD" in the new config does appear to work! All the time; see above
+    private static boolean isAnAdditionalElementRendered()
+    {
+        var overlayList = OverlayRegistry.orderedEntries();
+        for (String name : TFCConfig.CLIENT.additionalExperienceBarElements.get())
+        {
+            for (int i = 0 ; i < overlayList.size() - 1 ; i++)
+            {
+                if (name.equals(overlayList.get(i).getDisplayName()) && overlayList.get(i).isEnabled())
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

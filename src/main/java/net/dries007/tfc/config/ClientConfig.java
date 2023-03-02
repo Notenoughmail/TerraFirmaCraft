@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import net.dries007.tfc.client.IngameOverlays;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -49,6 +50,7 @@ public class ClientConfig
     public final ForgeConfigSpec.BooleanValue showGuideBookTabInInventory;
     // Compatibility
     public final ForgeConfigSpec.ConfigValue<List<? extends String>> additionalMetalSheetTextures;
+    public final ForgeConfigSpec.ConfigValue<List<? extends String>> additionalExperienceBarElements;
 
     ClientConfig(ForgeConfigSpec.Builder innerBuilder)
     {
@@ -109,8 +111,8 @@ public class ClientConfig
         disabledExperienceBarStyle = builder.apply("disabledExperienceBarStyle").comment(
             "The style to display HUD elements when the XP bar is disabled.",
             "HOVER = Display all elements in their default positions",
-            "BUMP = Move elements closer to the hotbar; when fishing or riding a jumping entity, other elements move to their default positions",
-            "LEFT_HOTBAR = Move elements closer to the hotbar; when fishing or riding a jumping entity, those elements will appear as a vertical bar between the hotbar and offhand slot"
+            "BUMP = Move elements closer to the hotbar; when fishing or riding a jumping entity or when elements defined in additionalExperienceBarElements are enabled, other elements move to their default positions",
+            "LEFT_HOTBAR = Move elements closer to the hotbar; when fishing or riding a jumping entity, those elements will appear as a vertical bar between the hotbar and offhand slot, this will function the same as BUMP for elements defined in additionalExperienceBarElements"
         ).defineEnum("disabledExperienceBarStyle", DisabledExperienceBarStyle.HOVER);
 
         enableTFCF3Overlays = builder.apply("enableTFCF3Overlays").comment("Enable TFC additions to the F3 menu, showing time, date, and climate information.").define("enableTFCF3Overlays", true);
@@ -131,6 +133,11 @@ public class ClientConfig
             "Defines additional metal sheet textures that should be added to the block atlas, as they would be otherwise unused, for use in ingot piles and metal sheet blocks.",
             "For Pack Makers: When adding a Metal via a datapack, with a custom texture \"domain:block/my_texture\", and you get missing textures in ingot piles and sheet blocks, that texture needs to be added here"
         ).defineList("additionalMetalSheetTextures", ArrayList::new, o -> o instanceof String s && ResourceLocation.isValidResourceLocation(s));
+
+        additionalExperienceBarElements = builder.apply("additionalExperienceBarElements").comment(
+            "Defines additional HUD elements which should be considered when changing disabledExperienceBarStyle.",
+            "Set enableDebug to true to get a list of elements in the log."
+        ).defineList("additionalExperienceBarElements", ArrayList::new, o -> o instanceof String);
 
         innerBuilder.pop();
     }
