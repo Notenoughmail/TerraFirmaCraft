@@ -237,7 +237,7 @@ public interface Noise2D
      *
      * @param compareNoise value above which cliffs should be added
      * @param addendNoise  cliff height noise
-     * @param slope multiplier between the slope of the base noise and the slope of the added cliff
+     * @param slopeNoise multiplier between the slope of the base noise and the slope of the added cliff
      */
     default Noise2D slopedCliffMap(Noise2D compareNoise, Noise2D addendNoise, Noise2D slopeNoise)
     {
@@ -270,5 +270,15 @@ public interface Noise2D
     default Noise2D stretchX(double stretch)
     {
         return (x, z) -> this.noise(x / stretch, z);
+    }
+
+    default Noise2D warpZ(Noise2D warp)
+    {
+        return (x, z) -> this.noise(x, warp.noise(x, z));
+    }
+
+    default Noise2D warpX(Noise2D warp)
+    {
+        return (x, z) -> this.noise(warp.noise(x, z), z);
     }
 }

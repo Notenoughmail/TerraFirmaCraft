@@ -57,6 +57,7 @@ public final class RegionGenerator
     public final Noise2D oceanicInfluenceNoise;
     public final Noise2D rainfallNoise;
     public final Noise2D rainfallVarianceNoise;
+    public final Noise2D latitudeNoise;
     public final Settings settings;
     public final Noise2D hotSpotAgeNoise;
     public final Noise2D hotSpotIntensityNoise;
@@ -112,6 +113,17 @@ public final class RegionGenerator
             .octaves(2)
             .spread(0.1f)
             .scaled(0f, 20f);
+
+        final Noise2D zWarp = baseNoise(false, settings.temperatureScale(), 0)
+            .stretchX(0.2)
+            .scaled(-5, 5);
+        this.latitudeNoise = baseNoise(false, settings.temperatureScale(), 0)
+            .scaled(90, 0)
+            .warpZ((x, z) -> z + zWarp.noise(x, z))
+            .add(new OpenSimplex2D(seed.seed())
+                .octaves(2)
+                .spread(0.1)
+                .scaled(-2, 2));
 
         this.hotSpotAgeNoise = BiomeNoise.hotSpotAge(seed.seed()).spread(128);
         this.hotSpotIntensityNoise = BiomeNoise.hotSpotIntensity(seed.seed()).spread(128);
@@ -276,6 +288,7 @@ public final class RegionGenerator
         ADD_MOUNTAINS(AddMountains.INSTANCE),
         ANNOTATE_BIOME_ALTITUDE(AnnotateBiomeAltitude.INSTANCE),
         ANNOTATE_CLIMATE(AnnotateClimate.INSTANCE),
+        ANNOTATE_RAIN_SHADOW(AnnotateRainShadow.INSTANCE),
         CHOOSE_ROCKS(ChooseRocks.INSTANCE),
         ANNOTATE_KARST_SURFACE(KarstSurfaceRocks.INSTANCE),
         CHOOSE_BIOMES(ChooseBiomes.INSTANCE),

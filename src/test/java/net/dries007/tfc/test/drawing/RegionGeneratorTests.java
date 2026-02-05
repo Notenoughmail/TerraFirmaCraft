@@ -161,11 +161,30 @@ public class RegionGeneratorTests implements TestSetup
                 ? green.apply(Mth.clampedMap(point.discreteBiomeAltitude(), 0, 3, 0, 1))
                 : continentColor(point);
             case TEMPERATURE -> temperatureGradient(point, point.temperature, -25f, 35f);
-            case RAINFALL, RAINFALL_AFTER_RIVERS -> temperatureGradient(point, point.rainfall, 0, 500);
+            case RAINFALL, RAINFALL_AFTER_RIVERS, ANNOTATE_RAIN_SHADOW -> temperatureGradient(point, point.rainfall, 0, 500);
             case RAINFALL_VARIANCE -> oceanOutlineTemperatureGradient(point, point.rainfallVariance, -1, 1);
             case KOPPEN, KOPPEN_AFTER_RIVERS -> point.land()
                 ? koppenClimateColor(KoppenClimateClassification.classify(point.temperature, point.rainfall, point.rainfallVariance, isNorthernHemisphere(point.z)))
                 : continentColor(point);
+            case WIND_DIRECTION -> switch (point.windDir)
+            {
+                case 0b1 -> new Color(255, 255, 255); // North
+                case 0b11 -> new Color(128, 128, 128); // South
+                case 0b100 -> new Color(128, 0, 0); // West
+                case 0b1100 -> new Color(0, 0, 128); // East
+                case 0b101 -> new Color(245, 130, 48); // NW
+                case 0b1111 -> new Color(220, 190, 255); // SE
+                case 0b1101 -> new Color(0, 130, 200); // NE
+                case 0b111 -> new Color(255, 255, 25); // SW
+                default -> new Color(0, 0, 0);
+            };
+            case RAIN_SHADOW -> point.land() ?
+                point.mountain() ?
+                    new Color(128, 128, 128) :
+                    point.inRainShadow ?
+                        new Color(0, 0, 0) :
+                        new Color(255, 255, 255) :
+                cellColor(region);
             case CHOOSE_ROCKS ->
             {
                 final double value = new Random(point.rock >> 2).nextDouble();
@@ -535,6 +554,9 @@ public class RegionGeneratorTests implements TestSetup
         RAINFALL(Task.ANNOTATE_CLIMATE),
         RAINFALL_VARIANCE(Task.ANNOTATE_CLIMATE),
         KOPPEN(Task.ANNOTATE_CLIMATE),
+        WIND_DIRECTION(Task.ANNOTATE_RAIN_SHADOW),
+        ANNOTATE_RAIN_SHADOW(Task.ANNOTATE_RAIN_SHADOW),
+        RAIN_SHADOW(Task.ANNOTATE_RAIN_SHADOW),
         CHOOSE_ROCKS(Task.CHOOSE_ROCKS),
         ANNOTATE_KARST_SURFACE(Task.ANNOTATE_KARST_SURFACE),
         CHOOSE_BIOMES(Task.CHOOSE_BIOMES),

@@ -208,6 +208,11 @@ public final class Region
         static final short FLAG_MOUNTAIN = 0b10000;
         static final short FLAG_COASTAL_MOUNTAIN = 0b100000;
 
+        static final byte NS_WIND = 0b1;
+        static final byte NS_WIND_POS = 0b10;
+        static final byte EW_WIND = 0b100;
+        static final byte EW_WIND_POS = 0b1000;
+
         /** Distance to the nearest ocean. Note the actual distance may be lower if {@code distanceToEdge} is smaller than this. Negative values indicate an ocean, where {@code -2} indicates an ocean adjacent to land. */
         public byte distanceToOcean = 0;
         /** Distance to the nearest edge of the region. This is important because certain tasks need to not go too near to the edge to avoid continuity issues */
@@ -216,14 +221,17 @@ public final class Region
         public byte baseOceanDepth = 0;
         public byte baseLandHeight = 0;
         public byte biomeAltitude = 0;
+        public byte windDir = 0;
 
         public float rainfall;
         public float rainfallVariance;
         public float temperature;
+        public float latitude;
 
         public int biome = TFCLayers.OCEAN;
         public int rock = 0;
         public boolean isSurfaceRockKarst = false;
+        public boolean inRainShadow = false;
         public byte hotSpotAge = 0;
 
         private short flags;
@@ -255,5 +263,32 @@ public final class Region
         public void setLake() { flags |= FLAG_LAKE; }
         public void setMountain() { flags |= FLAG_MOUNTAIN; }
         public void setCoastalMountain() { flags |= FLAG_COASTAL_MOUNTAIN; }
+
+        // Specifies the direction the wind is blowing towards, contrary to meteorological convention
+        public void setNorthWind() { windDir |= NS_WIND; }
+        public void swapNorthSouthWind() { windDir ^= NS_WIND_POS; }
+        public void setWestWind() { windDir|= EW_WIND; }
+        public void setEastWind() { windDir |= EW_WIND | EW_WIND_POS; }
+
+        public int xWind()
+        {
+            return (windDir & EW_WIND) == 0 ?
+                0 :
+                (windDir & EW_WIND_POS) == 0 ?
+                    -1 :
+                    1;
+        }
+        public int zWind()
+        {
+            return (windDir & NS_WIND) == 0 ?
+                0 :
+                (windDir & NS_WIND_POS) == 0 ?
+                    -1 :
+                    1;
+        }
+        public boolean hasWind()
+        {
+            return (windDir & (NS_WIND | EW_WIND)) != 0;
+        }
     }
 }
