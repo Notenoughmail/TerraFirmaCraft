@@ -9,6 +9,7 @@ package net.dries007.tfc.world.region;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.DoubleUnaryOperator;
 
 import net.dries007.tfc.world.biome.BiomeNoise;
 import net.minecraft.util.Mth;
@@ -57,7 +58,8 @@ public final class RegionGenerator
     public final Noise2D oceanicInfluenceNoise;
     public final Noise2D rainfallNoise;
     public final Noise2D rainfallVarianceNoise;
-    public final Noise2D latitudeNoise;
+    public final Noise2D windDirectionNoise;
+    // public final Noise2D windStrengthNoise;
     public final Settings settings;
     public final Noise2D hotSpotAgeNoise;
     public final Noise2D hotSpotIntensityNoise;
@@ -114,16 +116,46 @@ public final class RegionGenerator
             .spread(0.1f)
             .scaled(0f, 20f);
 
-        final Noise2D zWarp = baseNoise(false, settings.temperatureScale(), 0)
-            .stretchX(0.2)
-            .scaled(-5, 5);
-        this.latitudeNoise = baseNoise(false, settings.temperatureScale(), 0)
-            .scaled(90, 0)
-            .warpZ((x, z) -> z + zWarp.noise(x, z))
+        // Fast Fourier Transform my beloved
+        // final boolean sin = true;
+        // final double[] windAmplitudes = { -1.0127, 0.0564, 0.3065, -0.0298, -0.0459, -0.0134, -0.0851, 0.0290 };
+        // final DoubleUnaryOperator windFunc = d ->
+        // {
+        //     int i = 0;
+        //     double ret = 2;
+        //     for (double a : windAmplitudes)
+        //     {
+        //         i++;
+        //         ret += a * (sin ? Math.sin(Math.PI * d * i) : triangle(i * 0.5, d));
+        //     }
+        //     return ret;
+        // };
+        final double[] coefficients = { 53.3785, -129.9403, 103.8133, -26.5328, -0.7001 };
+        final DoubleUnaryOperator windFunc = d ->
+        {
+            int e = 9;
+            double ret = 2;
+            for (double c : coefficients)
+            {
+                ret += c * Math.pow(d, e) * 1.1;
+                e -= 2;
+            }
+            return ret;
+        };
+
+        // 0 = East, π = West, -π/2 = North, π/2 = South
+        this.windDirectionNoise = baseNoise(false, settings.temperatureScale(), 0)
+            .warped(new OpenSimplex2D(seed.seed())
+                .octaves(3)
+                .spread(0.1)
+                .scaled(-10, 10))
+            .map(windFunc)
             .add(new OpenSimplex2D(seed.seed())
                 .octaves(2)
                 .spread(0.1)
-                .scaled(-2, 2));
+                .affine(0.01, 0))
+            .map(d -> (d % 2d) - 1)
+            .affine(Math.PI, 0);
 
         this.hotSpotAgeNoise = BiomeNoise.hotSpotAge(seed.seed()).spread(128);
         this.hotSpotIntensityNoise = BiomeNoise.hotSpotIntensity(seed.seed()).spread(128);

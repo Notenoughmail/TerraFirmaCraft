@@ -26,6 +26,7 @@ import net.dries007.tfc.test.TestSetup;
 import net.dries007.tfc.util.climate.KoppenClimateClassification;
 import net.dries007.tfc.world.Seed;
 import net.dries007.tfc.world.region.ChooseRocks;
+import net.dries007.tfc.world.region.MountainRange;
 import net.dries007.tfc.world.region.Region;
 import net.dries007.tfc.world.region.RegionGenerator;
 import net.dries007.tfc.world.region.RegionGenerator.Task;
@@ -57,7 +58,7 @@ public class RegionGeneratorTests implements TestSetup
     public void testRegionGenerator()
     {
         // Coordinates are given in grid scale, so 1 px = 128 blocks, 150 ~ 20km
-        drawStitchedRegions("", EnumSet.allOf(DrawnTask.class), RandomSupport.generateUniqueSeed(), 0, 75, 200);
+        drawStitchedRegions("", EnumSet.of(DrawnTask.WIND_DIRECTION, DrawnTask.ANNOTATE_RAIN_SHADOW, DrawnTask.RAIN_SHADOW, DrawnTask.RAIN_SHADOW_SMOOTH), RandomSupport.generateUniqueSeed(), 0, 75, 250);
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -166,25 +167,44 @@ public class RegionGeneratorTests implements TestSetup
             case KOPPEN, KOPPEN_AFTER_RIVERS -> point.land()
                 ? koppenClimateColor(KoppenClimateClassification.classify(point.temperature, point.rainfall, point.rainfallVariance, isNorthernHemisphere(point.z)))
                 : continentColor(point);
-            case WIND_DIRECTION -> switch (point.windDir)
+            case WIND_DIRECTION -> new Color(Mth.hsvToRgb((float) ((point.windAngle + Math.PI) / (2 * Math.PI)), 1, point.windStrength));
+            case RAIN_SHADOW ->
             {
-                case 0b1 -> new Color(255, 255, 255); // North
-                case 0b11 -> new Color(128, 128, 128); // South
-                case 0b100 -> new Color(128, 0, 0); // West
-                case 0b1100 -> new Color(0, 0, 128); // East
-                case 0b101 -> new Color(245, 130, 48); // NW
-                case 0b1111 -> new Color(220, 190, 255); // SE
-                case 0b1101 -> new Color(0, 130, 200); // NE
-                case 0b111 -> new Color(255, 255, 25); // SW
-                default -> new Color(0, 0, 0);
-            };
-            case RAIN_SHADOW -> point.land() ?
-                point.mountain() ?
-                    new Color(128, 128, 128) :
-                    point.inRainShadow ?
-                        new Color(0, 0, 0) :
-                        new Color(255, 255, 255) :
-                cellColor(region);
+                for (MountainRange range : region.mountainRanges())
+                {
+                    if (range.isDebugVec(point.x, point.z)) yield new Color(38, 255, 230);
+                    if (range.isDebugBound(point.x, point.z)) yield new Color(255, 0, 0);
+                    if (point.land())
+                    {
+                        if (range.mountains().contains(point.index))
+                        {
+                            final int c = (int) Mth.clampedMap(point.baseRainShadowInfluence, 0, 1, 0, 255);
+                            yield new Color(c, 0, c);
+                        }
+                        else if (range.shape().fill().contains(point.index))
+                        {
+                            final int c = (int) Mth.clampedMap(point.baseRainShadowInfluence, 0, 1, 0, 255);
+                            yield new Color(c, c, 0);
+                        }
+                    }
+                }
+                if (point.land())
+                {
+                    if (point.mountain()) yield new Color(128, 128, 128);
+                    if (point.inRainShadow) yield new Color(0, (int) Mth.clampedMap(point.baseRainShadowInfluence, 0, 1, 0, 255), 0);
+                    yield point.baseRainShadowInfluence == -1 ? new Color(255, 255, 255) : new Color(0, 0, (int) Mth.clampedMap(point.baseRainShadowInfluence, -1, 1, 0, 255));
+                }
+                yield cellColor(region);
+            }
+            case RAIN_SHADOW_SMOOTH ->
+            {
+                if (point.inRainShadow)
+                {
+                    final int c = (int) Mth.clampedMap(point.smoothedRainShadowInfluence, 0.05, 1, 0, 255);
+                    yield new Color(c, c, c);
+                }
+                yield cellColor(region);
+            }
             case CHOOSE_ROCKS ->
             {
                 final double value = new Random(point.rock >> 2).nextDouble();
@@ -557,6 +577,7 @@ public class RegionGeneratorTests implements TestSetup
         WIND_DIRECTION(Task.ANNOTATE_RAIN_SHADOW),
         ANNOTATE_RAIN_SHADOW(Task.ANNOTATE_RAIN_SHADOW),
         RAIN_SHADOW(Task.ANNOTATE_RAIN_SHADOW),
+        RAIN_SHADOW_SMOOTH(Task.ANNOTATE_RAIN_SHADOW),
         CHOOSE_ROCKS(Task.CHOOSE_ROCKS),
         ANNOTATE_KARST_SURFACE(Task.ANNOTATE_KARST_SURFACE),
         CHOOSE_BIOMES(Task.CHOOSE_BIOMES),

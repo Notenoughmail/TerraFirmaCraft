@@ -6,6 +6,7 @@
 
 package net.dries007.tfc.world.region;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import com.google.common.collect.AbstractIterator;
@@ -29,6 +30,7 @@ public final class Region
     private int sizeZ;
     private Point[] data;
     private @Nullable List<RiverEdge> rivers;
+    private final List<MountainRange> mountainRanges;
 
     Region(Cellular2D.Cell cell)
     {
@@ -48,6 +50,8 @@ public final class Region
         this.sizeZ = 1 + maxZ - minZ;
 
         this.data = new Point[0]; // Must initialize via `setRegionArea()` first
+
+        this.mountainRanges = new ArrayList<>();
     }
 
     /**
@@ -120,6 +124,16 @@ public final class Region
     public List<RiverEdge> rivers()
     {
         return Objects.requireNonNull(rivers);
+    }
+
+    public void addMountainRange(MountainRange range)
+    {
+        mountainRanges.add(range);
+    }
+
+    public List<MountainRange> mountainRanges()
+    {
+        return mountainRanges;
     }
 
     public double noise() { return noise; }
@@ -226,7 +240,12 @@ public final class Region
         public float rainfall;
         public float rainfallVariance;
         public float temperature;
-        public float latitude;
+        public float windAngle, windDx, windDz, windStrength;
+        /**
+         * The raw mountain range influence on a point before smoothing
+         */
+        public float baseRainShadowInfluence = -1f;
+        public float smoothedRainShadowInfluence;
 
         public int biome = TFCLayers.OCEAN;
         public int rock = 0;
@@ -264,11 +283,13 @@ public final class Region
         public void setMountain() { flags |= FLAG_MOUNTAIN; }
         public void setCoastalMountain() { flags |= FLAG_COASTAL_MOUNTAIN; }
 
-        // Specifies the direction the wind is blowing towards, contrary to meteorological convention
-        public void setNorthWind() { windDir |= NS_WIND; }
-        public void swapNorthSouthWind() { windDir ^= NS_WIND_POS; }
-        public void setWestWind() { windDir|= EW_WIND; }
-        public void setEastWind() { windDir |= EW_WIND | EW_WIND_POS; }
+        public void setWind(double angle, double strength)
+        {
+            windAngle = (float) angle;
+            windDx = (float) (Math.cos(angle) * strength);
+            windDz = (float) (Math.sin(angle) * strength);
+            windStrength = (float) strength;
+        }
 
         public int xWind()
         {
@@ -285,10 +306,6 @@ public final class Region
                 (windDir & NS_WIND_POS) == 0 ?
                     -1 :
                     1;
-        }
-        public boolean hasWind()
-        {
-            return (windDir & (NS_WIND | EW_WIND)) != 0;
         }
     }
 }

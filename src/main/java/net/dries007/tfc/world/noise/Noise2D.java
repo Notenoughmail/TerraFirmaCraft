@@ -271,14 +271,4 @@ public interface Noise2D
     {
         return (x, z) -> this.noise(x / stretch, z);
     }
-
-    default Noise2D warpZ(Noise2D warp)
-    {
-        return (x, z) -> this.noise(x, warp.noise(x, z));
-    }
-
-    default Noise2D warpX(Noise2D warp)
-    {
-        return (x, z) -> this.noise(warp.noise(x, z), z);
-    }
 }
